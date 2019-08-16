@@ -1,0 +1,49 @@
+---
+- name: lookup organization
+  register: org
+  awx_organization:
+    api_url: "{{ awx_url }}"
+    api_user: "{{ awx_username }}"
+    api_password: "{{ awx_password }}"
+    name: "{{ project.organization }}"
+    facts: true
+
+- name: lookup SCM credential
+  register: credential
+  awx_credential_ssh:
+    api_url: "{{ awx_url }}"
+    api_user: "{{ awx_username }}"
+    api_password: "{{ awx_password }}"
+    organization_id: "{{ org.resource.id }}"
+    name: "{{ project.credential }}"
+    kind: scm
+    facts: true
+
+- name: "created project {{ project.name }}"
+  register: result
+  awx_project_scm:
+    api_url: "{{ awx_url }}"
+    api_user: "{{ awx_username }}"
+    api_password: "{{ awx_password }}"
+    state: "{{ project.state|default('present') }}"
+    organization_id: "{{ org.resource.id }}"
+    name: "{{ project.name }}"
+    credential: "{{ credential.resource.id }}"
+    description: "{{ project.description }}"
+    scm_type: git
+    scm_url: "{{ project.url }}"
+    scm_branch: "{{ project.branch }}"
+    scm_clean: true
+    scm_delete_on_update: false
+    scm_update_on_launch: true
+    scm_update_cache_timeout: 0
+
+- set_fact:
+    awx_organization_id: "{{ org.resource.id }}"
+    awx_project_id: "{{ result.resource.id|mandatory }}"
+
+- name: "created job templates for project {{ project.name }}"
+  with_items: "{{ project.templates }}"
+  loop_control:
+    loop_var: spec
+  include_tasks: template.yml

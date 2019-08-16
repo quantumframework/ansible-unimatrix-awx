@@ -1,0 +1,52 @@
+---
+- name: "lookup inventory {{ spec.inventory }}"
+  register: inventory
+  awx_inventory:
+    api_url: "{{ awx_url }}"
+    api_user: "{{ awx_username }}"
+    api_password: "{{ awx_password }}"
+    state: facts
+    organization_id: "{{ awx_organization_id }}"
+    name: "{{ spec.inventory }}"
+
+- name: "created job template {{ spec.name }}"
+  register: job_template
+  retries: 10
+  until: job_template is success
+  awx_job_template:
+    api_url: "{{ awx_url }}"
+    api_user: "{{ awx_username }}"
+    api_password: "{{ awx_password }}"
+    state: present
+    inventory_id: "{{ inventory.resource.id }}"
+    project_id: "{{ awx_project_id }}"
+    become: "{{ spec.become|default(False) }}"
+    kind: "{{ spec.kind|default('run') }}"
+    playbook: "{{ spec.playbook }}"
+    name: "{{ spec.name }}"
+    description: "{{ spec.description }}"
+    variables: "{{ spec.variables|default('') }}"
+    ask_variables_on_launch: "{{ spec.ask_variables_on_launch|default(False) }}"
+    ask_job_type_on_launch: "{{ spec.ask_job_type_on_launch|default(False) }}"
+
+- name: "added credentials to job template {{ spec.name }}"
+  vars:
+    awx_job_template_id: "{{ job_template.resource.id }}"
+    awx_job_template_name: "{{ job_template.resource.name }}"
+  with_items: "{{ spec.credentials|default([]) }}"
+  include_tasks: template_credentials.yml
+
+- name: "create a periodic schema to run the job"
+  when: spec.schema|default(None)
+  vars:
+    awx_job_template_id: "{{ job_template.resource.id }}"
+    awx_job_template_name: "{{ job_template.resource.name }}"
+  awx_schema:
+    api_url: "{{ awx_url }}"
+    api_user: "{{ awx_username }}"
+    api_password: "{{ awx_password }}"
+    state: present
+    job_template_id: "{{ awx_job_template_id }}"
+    name: "{{ spec.schema.name }}"
+    description: "{{ spec.schema.description }}"
+    rrule: "{{ spec.schema.rrule }}"

@@ -1,0 +1,12 @@
+---
+- name: "created Ansible Tower inventories"
+  with_items: "{{ awx_inventories|default([]) }}"
+  loop_control:
+    loop_var: inventory
+  include_tasks: inventory.yml
+
+- name: "created Ansible Tower projects"
+  with_items: "{{ awx_projects }}"
+  loop_control:
+    loop_var: project
+  include_tasks: project.yml
