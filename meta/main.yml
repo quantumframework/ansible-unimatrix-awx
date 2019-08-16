@@ -1,5 +1,6 @@
 galaxy_info:
   author: Cochise Ruhulessin
+  role_name: unimatrix-awx
   description: |-
     Configure Ansible Tower using Ansible.
   company: DigitalCitizen B.V.
